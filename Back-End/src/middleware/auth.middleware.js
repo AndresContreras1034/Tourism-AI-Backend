@@ -8,71 +8,94 @@ export const authMiddleware = (req, res, next) => {
 
     const authHeader = req.headers.authorization;
 
+    // ✅ Validación estricta del header
     if (!authHeader) {
       return res.status(401).json({
-        message: "No token provided",
+        success: false,
+        message: "No Authorization header provided",
       });
     }
 
-    const token = authHeader.split(" ")[1];
+    // ✅ Validar formato Bearer
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid Authorization format (expected Bearer token)",
+      });
+    }
+
+    // 🧼 Extraer token limpio
+    const token = authHeader.replace("Bearer ", "").trim();
 
     if (!token) {
       return res.status(401).json({
-        message: "Invalid token format",
+        success: false,
+        message: "Token missing",
       });
     }
 
-    console.log("📦 [AUTH] Token recibido:", token.substring(0, 20) + "...");
+    console.log(
+      "📦 [AUTH] Token recibido:",
+      token.substring(0, 20) + "..."
+    );
 
+    // 🔐 Verificar JWT
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
     console.log("🧠 [AUTH] decoded payload:", decoded);
 
-    // 🔥 FIX CRÍTICO: normalizar estructura del usuario
-    const userId =
-      decoded.id ||
-      decoded.userId ||
-      decoded.sub;
+    // 🔥 Extraer ID de forma flexible (compatibilidad con distintos tokens)
+    const userId = decoded.id || decoded.userId || decoded.sub;
 
     if (!userId) {
       console.error("❌ [AUTH] Token sin identificador de usuario");
       return res.status(401).json({
-        message: "Invalid token payload",
+        success: false,
+        message: "Invalid token payload: missing user id",
       });
     }
 
-    console.log("🟢 [AUTH] Usuario autenticado:", userId);
-
+    // 👤 Setear usuario en request
     req.user = {
-      id: userId,
+      id: String(userId),
       ...decoded,
     };
 
-    next();
+    console.log("🟢 [AUTH] Usuario autenticado:", req.user.id);
 
+    next();
   } catch (error) {
     console.error("❌ [AUTH] Error:", error.message);
 
+    // ⏰ Token expirado
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
+        success: false,
         message: "Token expired",
       });
     }
 
+    // 🚫 Token inválido
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
+        success: false,
         message: "Invalid token",
       });
     }
 
+    // 💥 Error inesperado
     return res.status(500).json({
+      success: false,
       message: "Authentication error",
     });
   }
 };
 
-// 🔥 Debug opcional
+// 🧪 Debug middleware opcional
 export const debugAuth = (req, res, next) => {
-  console.log("🧠 [DEBUG AUTH] req.user:", req.user || "No autenticado");
+  console.log(
+    "🧠 [DEBUG AUTH] req.user:",
+    req.user || "No autenticado"
+  );
   next();
 };

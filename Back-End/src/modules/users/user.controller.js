@@ -1,4 +1,3 @@
-// user controller
 import { query } from "../../config/db.js";
 import cloudinary from "../../utils/cloudinary.js";
 import fs from "fs";
@@ -10,9 +9,21 @@ console.log("👤 [USER CONTROLLER] Inicializado");
 // =========================
 export const getUserById = async (req, res) => {
   try {
-    console.log("📥 [USER] Obteniendo usuario...");
+    console.log("\n📥 [USER] Obteniendo usuario...");
 
-    const userId = req.user.id;
+    // 🔥 FIX CRÍTICO: normalizar tipo
+    const userId = Number(req.user?.id);
+
+    console.log("🧠 [USER] req.user:", req.user);
+    console.log("🧠 [USER] userId normalizado:", userId);
+
+    if (!userId || Number.isNaN(userId)) {
+      console.error("❌ [USER] userId inválido");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user id from token",
+      });
+    }
 
     const result = await query(
       `
@@ -22,6 +33,8 @@ export const getUserById = async (req, res) => {
       `,
       [userId]
     );
+
+    console.log("📊 [USER] Rows returned:", result.rowCount);
 
     if (result.rows.length === 0) {
       console.warn("⚠️ [USER] Usuario no encontrado");
@@ -38,12 +51,13 @@ export const getUserById = async (req, res) => {
       success: true,
       data: result.rows[0],
     });
+
   } catch (error) {
-    console.error("❌ [USER ERROR]:", error.message);
+    console.error("❌ [USER ERROR FULL]:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Error getting user",
+      message: error.message || "Error getting user",
     });
   }
 };
@@ -53,10 +67,13 @@ export const getUserById = async (req, res) => {
 // =========================
 export const updateUser = async (req, res) => {
   try {
-    console.log("✏️ [USER] Actualizando usuario...");
+    console.log("\n✏️ [USER] Actualizando usuario...");
 
-    const userId = req.user.id;
+    const userId = Number(req.user?.id);
     const { name } = req.body;
+
+    console.log("🧠 [UPDATE] userId:", userId);
+    console.log("🧠 [UPDATE] body:", req.body);
 
     const result = await query(
       `
@@ -75,12 +92,13 @@ export const updateUser = async (req, res) => {
       message: "User updated successfully",
       data: result.rows[0],
     });
+
   } catch (error) {
-    console.error("❌ [USER ERROR]:", error.message);
+    console.error("❌ [UPDATE USER ERROR FULL]:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Error updating user",
+      message: error.message || "Error updating user",
     });
   }
 };
@@ -90,9 +108,11 @@ export const updateUser = async (req, res) => {
 // =========================
 export const uploadAvatar = async (req, res) => {
   try {
-    console.log("📸 [USER] Subiendo avatar...");
+    console.log("\n📸 [USER] Subiendo avatar...");
 
-    const userId = req.user.id;
+    const userId = Number(req.user?.id);
+
+    console.log("🧠 [AVATAR] userId:", userId);
 
     if (!req.file) {
       return res.status(400).json({
@@ -101,18 +121,15 @@ export const uploadAvatar = async (req, res) => {
       });
     }
 
-    // ☁️ subir a Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "avatars",
       transformation: [
-        { width: 300, height: 300, crop: "fill" }, // 🔥 optimización automática
+        { width: 300, height: 300, crop: "fill" },
       ],
     });
 
-    // 🧹 borrar archivo local
     fs.unlinkSync(req.file.path);
 
-    // 🗄️ guardar URL en BD
     const updatedUser = await query(
       `
       UPDATE users
@@ -132,11 +149,11 @@ export const uploadAvatar = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ [UPLOAD ERROR]:", error);
+    console.error("❌ [UPLOAD AVATAR ERROR FULL]:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Error subiendo avatar",
+      message: error.message || "Error subiendo avatar",
     });
   }
 };
@@ -146,9 +163,11 @@ export const uploadAvatar = async (req, res) => {
 // =========================
 export const deleteUser = async (req, res) => {
   try {
-    console.log("🗑️ [USER] Eliminando usuario...");
+    console.log("\n🗑️ [USER] Eliminando usuario...");
 
-    const userId = req.user.id;
+    const userId = Number(req.user?.id);
+
+    console.log("🧠 [DELETE] userId:", userId);
 
     await query(
       "DELETE FROM users WHERE id = $1",
@@ -161,12 +180,13 @@ export const deleteUser = async (req, res) => {
       success: true,
       message: "User deleted successfully",
     });
+
   } catch (error) {
-    console.error("❌ [USER ERROR]:", error.message);
+    console.error("❌ [DELETE USER ERROR FULL]:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Error deleting user",
+      message: error.message || "Error deleting user",
     });
   }
 };

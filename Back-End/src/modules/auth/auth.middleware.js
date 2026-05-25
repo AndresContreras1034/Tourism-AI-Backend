@@ -26,7 +26,7 @@ export const authMiddleware = (req, res, next) => {
     }
 
     // =========================
-    // 🔥 FIX IMPORTANTE (robust split)
+    // 🔥 VALIDACIÓN BEARER
     // =========================
     const parts = authHeader.split(" ");
 
@@ -55,22 +55,34 @@ export const authMiddleware = (req, res, next) => {
     // =========================
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
-    if (!decoded?.id) {
-      console.warn("⚠️ [AUTH] Token sin payload válido");
+    console.log("🧠 [AUTH] Decoded payload:", decoded);
+
+    // =========================
+    // 💥 NORMALIZAR USER ID (CLAVE)
+    // =========================
+    const userId =
+      decoded.id ||
+      decoded.userId ||
+      decoded.sub;
+
+    if (!userId) {
+      console.error("❌ [AUTH] Token sin userId válido");
 
       return res.status(401).json({
         success: false,
-        message: "Invalid token payload",
+        message: "Invalid token payload (no user id)",
       });
     }
 
-    console.log("🟢 [AUTH] Token válido");
-    console.log("👤 User ID:", decoded.id);
+    console.log("🟢 [AUTH] Usuario autenticado:", userId);
 
     // =========================
-    // 🧠 ATTACH USER
+    // 🧠 ATTACH USER (ESTABLE)
     // =========================
-    req.user = decoded;
+    req.user = {
+      id: userId,
+      ...decoded,
+    };
 
     next();
 

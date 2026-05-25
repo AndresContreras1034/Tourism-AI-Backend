@@ -6,7 +6,7 @@ import {
   getUserById,
   updateUser,
   deleteUser,
-  uploadAvatar, // 🔥 NUEVO
+  uploadAvatar,
 } from "./user.controller.js";
 
 import { authMiddleware } from "../auth/auth.middleware.js";
@@ -15,52 +15,36 @@ console.log("👤 [USER ROUTES] Inicializando rutas de usuario");
 
 const router = express.Router();
 
-// =========================
-// 📦 CONFIG MULTER
-// =========================
+/* =========================================================
+   📦 MULTER CONFIG
+========================================================= */
 const upload = multer({
-  dest: "uploads/", // carpeta temporal
+  dest: "uploads/",
 });
 
-// =========================
-// 📥 OBTENER USUARIO
-// =========================
-router.get("/", authMiddleware, async (req, res, next) => {
-  console.log("➡️ [ROUTE] GET /user");
+/* =========================================================
+   📥 GET USER
+========================================================= */
+router.get("/", authMiddleware, getUserById);
 
-  getUserById(req, res).catch(next);
-});
+/* =========================================================
+   ✏️ UPDATE USER
+========================================================= */
+router.patch("/", authMiddleware, updateUser);
 
-// =========================
-// ✏️ ACTUALIZAR USUARIO
-// =========================
-router.patch("/", authMiddleware, async (req, res, next) => {
-  console.log("➡️ [ROUTE] PATCH /user");
-
-  updateUser(req, res).catch(next);
-});
-
-// =========================
-// 📸 SUBIR AVATAR (🔥 NUEVO)
-// =========================
+/* =========================================================
+   📸 UPLOAD AVATAR
+========================================================= */
 router.post(
   "/avatar",
   authMiddleware,
   upload.single("avatar"),
-  async (req, res, next) => {
-    console.log("➡️ [ROUTE] POST /user/avatar");
-
-    uploadAvatar(req, res).catch(next);
-  }
+  uploadAvatar
 );
 
-// =========================
-// 🗑️ ELIMINAR USUARIO
-// =========================
-router.delete("/", authMiddleware, async (req, res, next) => {
-  console.log("➡️ [ROUTE] DELETE /user");
-
-  deleteUser(req, res).catch(next);
-});
+/* =========================================================
+   🗑️ DELETE USER
+========================================================= */
+router.delete("/", authMiddleware, deleteUser);
 
 export default router;
