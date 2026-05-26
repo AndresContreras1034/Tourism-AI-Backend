@@ -1,12 +1,8 @@
-console.log("🧠 [PROMPT BUILDER] Inicializado");
-
 // ======================================================
 // ✈️ 1. PROMPT PARA PLANES DE VIAJE
 // ======================================================
 
 export const buildTravelPrompt = (profile) => {
-  console.log("🧠 [PROMPT] Generando prompt de viajes...");
-
   const {
     originCity,
     budget,
@@ -22,11 +18,13 @@ export const buildTravelPrompt = (profile) => {
     : "No especificado";
 
   return `
-Eres un experto en turismo y planificación de viajes.
+Eres un experto en turismo, planificación de viajes y recomendaciones locales en Colombia.
 
-Tu tarea es generar 3 planes de viaje personalizados.
+Tu tarea es generar EXACTAMENTE 3 planes de viaje personalizados.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📍 CONTEXTO DEL USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Ciudad de origen: ${originCity || "No especificado"}
 - Presupuesto: ${budget || "medio"}
 - Tipo de viaje: ${travelType || "general"}
@@ -35,79 +33,140 @@ Tu tarea es generar 3 planes de viaje personalizados.
 - Compañía: ${companions || "no especificado"}
 - Duración del viaje: ${duration || "no especificado"}
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 OBJETIVO
-- Planes realistas según presupuesto
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Crear planes realistas y turísticos
+- Basados en presupuesto real de Colombia
 - Experiencias locales auténticas
-- Variación entre planes
+- Variación clara entre los 3 planes (económico, medio, premium)
 
-📦 RESPUESTA OBLIGATORIA (SOLO JSON)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 RESPUESTA OBLIGATORIA (SOLO JSON VÁLIDO)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Devuelve EXACTAMENTE este formato JSON, sin markdown, sin bloques de código, sin texto adicional:
+
 {
   "plans": [
     {
       "title": "string",
-      "description": "string",
-      "estimatedPrice": number,
-      "activities": ["string"],
-      "locationSuggestion": "string"
+      "location": {
+        "name": "string",
+        "coordinates": {
+          "lat": number,
+          "lng": number
+        }
+      },
+      "score": number,
+      "ai_context": {
+        "summary": "string",
+        "local_insight": "string"
+      },
+      "transport": [
+        {
+          "key": "caminar | uber | bicicleta | bus",
+          "desc": "string"
+        }
+      ],
+      "map_points": [
+        {
+          "lat": number,
+          "lng": number,
+          "label": "string"
+        }
+      ],
+      "experience": {
+        "description": "string",
+        "highlights": ["string"]
+      },
+      "budget": {
+        "estimated_total": number,
+        "price_range": {
+          "coffee": "string",
+          "meal": "string",
+          "snack": "string"
+        }
+      },
+      "optimal_day": {
+        "date": "string",
+        "weather": {
+          "condition": "string",
+          "temp_min": number,
+          "temp_max": number,
+          "precip_probability": number,
+          "icon": "string"
+        },
+        "reason": "string"
+      },
+      "security": {
+        "level": "low | medium | high",
+        "recommendation": "string",
+        "tips": ["string"]
+      }
     }
   ]
 }
 
-🚫 REGLAS
-- Solo JSON
-- Máximo 3 planes
-- Sin texto extra
-`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 REGLAS OBLIGATORIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- SOLO JSON válido (sin markdown, sin \`\`\`)
+- EXACTAMENTE 3 planes
+- Sin textos adicionales, explicaciones ni comentarios
+- Sin null — si no hay dato, usa un valor realista inventado
+`.trim();
 };
 
 // ======================================================
-// 💬 2. PROMPT PARA CHAT (ESTAFAS / SEGURIDAD BOGOTÁ)
+// 💬 2. PROMPT PARA CHAT
 // ======================================================
 
 export const buildChatPrompt = (message) => {
-  console.log("💬 [PROMPT] Generando prompt de chat...");
-
   return `
-Eres un asistente experto en turismo, seguridad urbana y estafas en Bogotá, Colombia.
+Eres un asistente experto en turismo, seguridad urbana y precios en Bogotá, Colombia.
 
-Tu función es ayudar a extranjeros con situaciones reales.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 TU FUNCIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Ayudar a turistas y extranjeros
+- Detectar posibles estafas
+- Explicar precios normales vs abusivos
+- Dar contexto cultural real
+- Dar consejos claros y seguros
 
-📍 CONTEXTO:
-- Ciudad: Bogotá
-- Tipo de usuario: turista / extranjero
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧠 REGLAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- No exagerar peligros
+- No inventar leyes
+- Respuestas claras, directas y útiles
+- Tono calmado y profesional
 
-🎯 TU TRABAJO:
-- Detectar estafas o cobros abusivos
-- Explicar precios normales vs exagerados
-- Dar contexto cultural local
-- Dar consejos claros y accionables
-- Mantener tono calmado y directo
-
-🧠 IMPORTANTE:
-- No exageres peligros
-- No inventes leyes
-- Sé honesto con precios y contexto real
-
-💬 MENSAJE DEL USUARIO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 MENSAJE DEL USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${message}
-
-RESPONDE DE FORMA CLARA Y DIRECTA.
-`;
+`.trim();
 };
 
 // ======================================================
-// 🔥 OPCIONAL (SI QUIERES UN CHAT CON PERFIL)
+// 🔥 3. CHAT CON PERFIL
 // ======================================================
 
 export const buildChatWithProfilePrompt = (profile, message) => {
-  console.log("💬 [PROMPT] Chat con perfil generado...");
+  const interests = Array.isArray(profile?.interests)
+    ? profile.interests.join(", ")
+    : "N/A";
 
   return `
 ${buildChatPrompt(message)}
 
-📊 INFO ADICIONAL DEL USUARIO:
-- Intereses: ${Array.isArray(profile?.interests) ? profile.interests.join(", ") : "N/A"}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 CONTEXTO DEL USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Intereses: ${interests}
 - Tipo de viaje: ${profile?.travelType || "N/A"}
 - Presupuesto: ${profile?.budget || "N/A"}
-`;
+`.trim();
 };

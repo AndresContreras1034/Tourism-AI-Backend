@@ -32,8 +32,6 @@ export const registerUser = async ({ email, password, name }) => {
 
   const user = result.rows[0];
 
-  // ❌ NO SE AUTENTICA DIRECTO
-  // 🔐 SOLO DEVUELVE QUE DEBE PASAR MFA
   return {
     requiresMFA: true,
     userId: user.id,
@@ -66,12 +64,6 @@ export const loginUser = async ({ email, password }) => {
 
   console.log("🟢 [AUTH] Credenciales válidas");
 
-  // =========================
-  // 🔐 MFA OBLIGATORIO (SIN CONDICIÓN)
-  // =========================
-
-  console.log("🔐 [AUTH] MFA obligatorio para todos los usuarios");
-
   const tempToken = jwt.sign(
     {
       id: user.id,
@@ -100,8 +92,9 @@ export const verifyMfaLogin = async ({ userId, token }) => {
     throw new Error("Invalid MFA code");
   }
 
+  // 🔥 FIX: incluir tokens aquí
   const result = await query(
-    "SELECT id, email, name FROM users WHERE id = $1",
+    "SELECT id, email, name, tokens FROM users WHERE id = $1",
     [userId]
   );
 
@@ -118,7 +111,7 @@ export const verifyMfaLogin = async ({ userId, token }) => {
   );
 
   return {
-    user,
+    user, // 👈 ahora incluye tokens
     token: jwtToken,
   };
 };

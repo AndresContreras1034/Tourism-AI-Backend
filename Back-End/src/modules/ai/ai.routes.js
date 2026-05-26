@@ -1,6 +1,8 @@
 import express from "express";
 import { authMiddleware } from "../../middleware/auth.middleware.js";
 import { generatePlans, generateChatResponse } from "./ai.service.js";
+import { enrichPlan } from "../recommendations/enrich.service.js";
+import { getRecommendations } from "../recommendations/recommendations.service.js";
 
 const router = express.Router();
 
@@ -24,7 +26,6 @@ router.post("/generate-plans", authMiddleware, async (req, res) => {
 
     console.log("🟢 [AI PLANS] Resultado generado correctamente");
     console.log(result);
-
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     return res.status(200).json({
@@ -43,7 +44,7 @@ router.post("/generate-plans", authMiddleware, async (req, res) => {
 });
 
 // ======================================================
-// 💬 CHAT IA (TU CASO PRINCIPAL)
+// 💬 CHAT IA
 // ======================================================
 router.post("/chat", async (req, res) => {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -68,7 +69,6 @@ router.post("/chat", async (req, res) => {
 
     console.log("🟢 [AI CHAT] Respuesta generada:");
     console.log(response);
-
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     return res.status(200).json({
@@ -82,6 +82,100 @@ router.post("/chat", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error in chat",
+    });
+  }
+});
+
+// ======================================================
+// 📋 ENRICH PLAN (DeepSeek)
+// POST /api/ai/enrich
+// ======================================================
+router.post("/enrich", async (req, res) => {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("✨ [AI ENRICH] Request recibido");
+
+  try {
+    const { plan } = req.body;
+
+    if (!plan) {
+      return res.status(400).json({
+        success: false,
+        error: "Plan is required",
+      });
+    }
+
+    console.log("📦 [AI ENRICH] Plan recibido:", plan);
+
+    const enriched = await enrichPlan(plan);
+
+    console.log("🟢 [AI ENRICH] Plan enriquecido correctamente");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    return res.json({
+      success: true,
+      data: enriched,
+    });
+
+  } catch (error) {
+    console.error("❌ [AI ENRICH ERROR]", error);
+
+    return res.status(500).json({
+      success: false,
+      error: "Enrichment failed",
+    });
+  }
+});
+
+// ======================================================
+// 🧠 AI RECOMMENDATIONS (Python Ranking Engine)
+// POST /api/ai/recommendations
+// ======================================================
+router.post("/recommendations", authMiddleware, async (req, res) => {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("🎯 [AI RECOMMENDATIONS] Request recibido");
+
+  try {
+    const profile = req.body;
+    const userId = req.user?.id;
+
+    if (!profile) {
+      return res.status(400).json({
+        success: false,
+        error: "Profile is required",
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized",
+      });
+    }
+
+    console.log("📦 [AI RECOMMENDATIONS] Profile recibido:", profile);
+    console.log("👤 [AI RECOMMENDATIONS] userId:", userId);
+
+    const result = await getRecommendations(profile, userId);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    console.log("🟢 [AI RECOMMENDATIONS] Resultado generado correctamente");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    return res.json({
+      success: true,
+      data: result.data,
+      remainingTokens: result.remainingTokens,
+    });
+
+  } catch (err) {
+    console.error("❌ [AI RECOMMENDATIONS ERROR]", err);
+
+    return res.status(500).json({
+      success: false,
+      error: err.message,
     });
   }
 });

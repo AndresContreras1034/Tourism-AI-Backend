@@ -1,12 +1,12 @@
-// modules/plans/plan.controller.js
-
 import { getProfileByUserId } from "../onboarding/profile.service.js";
-import { getRecommendationsFromAI } from "./plan.service.js";
+import {
+  getPlanById as getPlanFromService
+} from "./plan.service.js";
 
 console.log("🧭 [PLAN CONTROLLER] Inicializado");
 
 // =====================================================
-// 🧠 RECOMENDACIONES REALES DESDE FASTAPI
+// 🧠 RECOMENDACIONES (FASTAPI ONLY)
 // =====================================================
 export const getRecommendations = async (req, res) => {
   try {
@@ -14,27 +14,17 @@ export const getRecommendations = async (req, res) => {
 
     const userId = req.user.id;
 
-    console.log("👤 [PLANS] Usuario:", userId);
-
-    // =====================================================
-    // 📥 OBTENER PERFIL DEL USUARIO
-    // =====================================================
+    // perfil usuario
     const profile = await getProfileByUserId(userId);
 
     if (!profile) {
-      console.warn("⚠️ [PLANS] Usuario sin perfil");
-
       return res.status(404).json({
         success: false,
         message: "Profile not found. Please complete onboarding.",
       });
     }
 
-    console.log("🧠 [PLANS] Perfil encontrado");
-
-    // =====================================================
-    // 🧠 MAPEAR PERFIL → FILTROS MOTOR PYTHON
-    // =====================================================
+    // filtros para motor IA externo
     const filters = {
       tipo_viaje: profile.tipo_viaje,
       presupuesto: profile.presupuesto,
@@ -43,14 +33,8 @@ export const getRecommendations = async (req, res) => {
       duracion: profile.duracion,
     };
 
-    console.log("📦 [PLANS] Filtros enviados:", filters);
-
-    // =====================================================
-    // 🤖 LLAMAR AI SERVICE (FASTAPI)
-    // =====================================================
+    // llamada FASTAPI
     const aiResponse = await getRecommendationsFromAI(filters);
-
-    console.log("🟢 [PLANS] Recomendaciones generadas");
 
     return res.status(200).json({
       success: true,
@@ -64,6 +48,46 @@ export const getRecommendations = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error generating recommendations",
+      error: error.message,
+    });
+  }
+};
+
+// =====================================================
+// 🚀 PLAN COMPLETO (ORCHESTRATOR + IA)
+// =====================================================
+export const getPlanByIdController = async (req, res) => {
+  try {
+    console.log("🧠 [PLANS] Generando plan completo");
+
+    const userId = req.user.id;
+    const planId = req.params.id;
+
+    // 1. perfil usuario (validación base)
+    const profile = await getProfileByUserId(userId);
+
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found",
+      });
+    }
+
+    // 2. ORCHESTRATOR (DeepSeek + FastAPI + seed)
+    const plan = await getPlanFromService(planId, req.user);
+
+    return res.status(200).json({
+      success: true,
+      message: "Plan generated successfully",
+      data: plan,
+    });
+
+  } catch (error) {
+    console.error("❌ [PLAN ERROR]:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Error generating plan",
       error: error.message,
     });
   }

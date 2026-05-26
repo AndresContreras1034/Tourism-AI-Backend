@@ -5,32 +5,36 @@ from engine.ranking_engine import recomendar
 router = APIRouter()
 
 # =========================================================
-# 📦 MODELO DE INPUT (lo que viene del frontend)
+# 📦 INPUT CONTRACT (NODE ↔ PYTHON)
 # =========================================================
 class UserFilters(BaseModel):
     tipo_viaje: str
     presupuesto: str
-    compania: str
-    clima: str
-    duracion: str
+
+    # 🔥 FIXED: unified naming (NO "clima/duracion" legacy)
+    companions: str
+    climate: str
+    duration: str
+
+    interestsText: str | None = None
 
 
 # =========================================================
-# 🧠 ENDPOINT PRINCIPAL DE RECOMENDACIONES
+# 🧠 ENDPOINT PRINCIPAL
 # =========================================================
 @router.post("/recommendations")
 def get_recommendations(filters: UserFilters):
 
     try:
-        user = filters.dict()
+        # Pydantic v2
+        user = filters.model_dump()
 
         results = recomendar(user, top_n=3)
 
-        # convertir dataframe a JSON limpio
         response = results.to_dict(orient="records")
 
         return {
-            "bestMatch": response[0] if len(response) > 0 else None,
+            "bestMatch": response[0] if response else None,
             "recommendations": response
         }
 

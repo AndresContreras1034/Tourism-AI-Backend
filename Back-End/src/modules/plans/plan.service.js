@@ -1,28 +1,22 @@
-// modules/plans/plan.service.js
-
 import axios from "axios";
+import { buildFullPlan } from "../ai/orchestrator/plan.orchestrator.service.js";
 
 console.log("🧭 [PLAN SERVICE] Inicializado");
 
 // =====================================================
-// 🌐 URL DEL AI SERVICE (FASTAPI)
+// 🌐 CONFIG FASTAPI
 // =====================================================
 const AI_SERVICE_URL =
   process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
 
-
 // =====================================================
-// 🧠 OBTENER RECOMENDACIONES DESDE FASTAPI
+// 🌐 FASTAPI CALL (SAFE)
 // =====================================================
-export const getRecommendationsFromAI = async (filters) => {
+const getRecommendationsFromFastAPI = async (filters) => {
   try {
-    console.log("🚀 [PLAN SERVICE] Consultando AI Service");
+    console.log("🚀 [FASTAPI] Requesting recommendations");
+    console.log("📦 [FASTAPI FILTERS]:", filters);
 
-    console.log("📦 [PLAN SERVICE] Filters:", filters);
-
-    // =====================================================
-    // 🤖 REQUEST A FASTAPI
-    // =====================================================
     const response = await axios.post(
       `${AI_SERVICE_URL}/recommendations`,
       filters,
@@ -30,19 +24,146 @@ export const getRecommendationsFromAI = async (filters) => {
         headers: {
           "Content-Type": "application/json",
         },
+        timeout: 8000,
       }
     );
 
-    console.log("🟢 [PLAN SERVICE] Respuesta recibida del AI Service");
+    console.log("🟢 [FASTAPI RESPONSE RAW]:", response.data);
 
-    return response.data;
+    return response.data || {
+      transport: [],
+      map_points: [],
+      insights: [],
+    };
 
   } catch (error) {
-    console.error(
-      "❌ [PLAN SERVICE ERROR]:",
-      error.response?.data || error.message
-    );
+    console.error("❌ [FASTAPI ERROR]:", error.message);
 
-    throw new Error("Error communicating with AI Service");
+    return {
+      transport: [],
+      map_points: [],
+      insights: [],
+    };
+  }
+};
+
+// =====================================================
+// 🧠 GET PLAN BY ID (ENTRYPOINT)
+// =====================================================
+export const getPlanById = async (id, user) => {
+  try {
+    console.log("🔥 =====================================");
+    console.log("🧠 [PLAN SERVICE] START");
+    console.log("🔥 =====================================");
+
+    console.log("🧾 PLAN ID:", id);
+    console.log("👤 USER:", user?.id);
+
+    // =====================================================
+    // 1. SEED BASE
+    // =====================================================
+    const seed = {
+      id,
+      title: "Plan generado",
+      location: {
+        name: "Bogotá",
+        coordinates: {
+          lat: 4.7110,
+          lng: -74.0721,
+        },
+      },
+      score: 4.5,
+      transport: [],
+      map_points: [],
+    };
+
+    console.log("🌱 SEED:", seed);
+
+    // =====================================================
+    // 2. FILTERS FOR FASTAPI
+    // =====================================================
+    const filters = {
+      userId: user?.id,
+      location: seed.location.name,
+      planId: id,
+    };
+
+    // =====================================================
+    // 3. FASTAPI CALL
+    // =====================================================
+    const recommendations = await getRecommendationsFromFastAPI(filters);
+
+    console.log("📡 FASTAPI RESULT:", recommendations);
+
+    // =====================================================
+    // 4. ENRICH SEED
+    // =====================================================
+    const enrichedSeed = {
+      ...seed,
+      transport: recommendations?.transport || [],
+      map_points: recommendations?.map_points || [],
+      insights: recommendations?.insights || [],
+    };
+
+    console.log("🧩 ENRICHED SEED:", enrichedSeed);
+
+    // =====================================================
+    // 5. ORCHESTRATOR CALL (CRITICAL)
+    // =====================================================
+    let finalPlan;
+
+    try {
+      console.log("🧠 CALLING ORCHESTRATOR...");
+
+      finalPlan = await buildFullPlan({
+        user,
+        location: seed.location,
+        seed: enrichedSeed,
+      });
+
+      console.log("🟢 ORCHESTRATOR SUCCESS");
+
+    } catch (err) {
+      console.error("❌ ORCHESTRATOR CRASH:", err.message);
+      throw err;
+    }
+
+    // =====================================================
+    // 6. RETURN FINAL
+    // =====================================================
+    console.log("🎯 FINAL PLAN READY");
+
+    return finalPlan;
+
+  } catch (error) {
+    console.error("❌ [PLAN SERVICE FATAL ERROR]:", error.message);
+
+    return {
+      title: "Error generando plan",
+      location: {
+        name: "N/A",
+        coordinates: null,
+      },
+      ai_context: {
+        summary: "No se pudo generar el plan en este momento.",
+        local_insight: "",
+      },
+      transport: [],
+      map_points: [],
+      experience: {
+        description: "",
+        highlights: [],
+      },
+      budget: {
+        estimated_total: 0,
+        price_range: {
+          coffee: "N/A",
+          meal: "N/A",
+          snack: "N/A",
+        },
+      },
+      optimal_day: null,
+      security: null,
+    };
   }
 };

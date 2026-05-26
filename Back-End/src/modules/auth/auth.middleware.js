@@ -58,7 +58,7 @@ export const authMiddleware = (req, res, next) => {
     console.log("🧠 [AUTH] Decoded payload:", decoded);
 
     // =========================
-    // 💥 NORMALIZAR USER ID (CLAVE)
+    // 💥 NORMALIZAR USER ID
     // =========================
     const userId =
       decoded.id ||
@@ -77,7 +77,7 @@ export const authMiddleware = (req, res, next) => {
     console.log("🟢 [AUTH] Usuario autenticado:", userId);
 
     // =========================
-    // 🧠 ATTACH USER (ESTABLE)
+    // 🧠 ATTACH USER
     // =========================
     req.user = {
       id: userId,

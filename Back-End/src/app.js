@@ -21,6 +21,9 @@ import mfaRoutes from "./modules/mfa/mfa.routes.js";
 // 🧠 AI
 import aiRoutes from "./modules/ai/ai.routes.js";
 
+// 💳 PAYMENTS
+import paymentRoutes from "./modules/payments/payment.routes.js";
+
 // 🧠 Utils
 import { logInfo, logSuccess, logError } from "./utils/logger.js";
 import errorMiddleware from "./middleware/error.middleware.js";
@@ -31,6 +34,8 @@ const app = express();
 
 /* =========================================================
    🔧 MIDDLEWARES
+   ⚠️ El webhook de Stripe necesita raw body ANTES de json()
+   Por eso se registra su ruta ANTES de express.json()
 ========================================================= */
 app.use(
   cors({
@@ -39,6 +44,13 @@ app.use(
   })
 );
 
+// ⚠️ WEBHOOK — raw body, va ANTES de express.json()
+app.use(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" })
+);
+
+// JSON para todo lo demás
 app.use(express.json());
 
 logInfo("APP", "Middlewares cargados correctamente");
@@ -73,11 +85,14 @@ app.use("/api/plans", planRoutes);
 // REVIEWS
 app.use("/api/reviews", reviewRoutes);
 
-// AI
+// MFA
+app.use("/api/mfa", mfaRoutes);
+
+// 🧠 AI (chat + plans + enrich + recommendations)
 app.use("/api/ai", aiRoutes);
 
-// 🔥 MFA (CLAVE — ESTA ES LA QUE TE FALTABA O NO SE CARGABA BIEN)
-app.use("/api/mfa", mfaRoutes);
+// 💳 PAYMENTS (Stripe)
+app.use("/api/payments", paymentRoutes);
 
 logSuccess("APP", "Rutas registradas correctamente");
 
