@@ -22,11 +22,9 @@ export const registerUser = async ({ email, password, name }) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const result = await query(
-    `
-    INSERT INTO users (email, password, name)
-    VALUES ($1, $2, $3)
-    RETURNING id, email, name
-    `,
+    `INSERT INTO users (email, password, name)
+     VALUES ($1, $2, $3)
+     RETURNING id, email, name`,
     [email, hashedPassword, name]
   );
 
@@ -92,9 +90,9 @@ export const verifyMfaLogin = async ({ userId, token }) => {
     throw new Error("Invalid MFA code");
   }
 
-  // 🔥 FIX: incluir tokens aquí
+  // ✅ Incluye role para el JWT
   const result = await query(
-    "SELECT id, email, name, tokens FROM users WHERE id = $1",
+    "SELECT id, email, name, role, tokens FROM users WHERE id = $1",
     [userId]
   );
 
@@ -102,8 +100,9 @@ export const verifyMfaLogin = async ({ userId, token }) => {
 
   const jwtToken = jwt.sign(
     {
-      id: user.id,
-      email: user.email,
+      id:           user.id,
+      email:        user.email,
+      role:         user.role,       // ✅ crítico para el admin middleware
       mfa_verified: true,
     },
     env.JWT_SECRET,
@@ -111,7 +110,7 @@ export const verifyMfaLogin = async ({ userId, token }) => {
   );
 
   return {
-    user, // 👈 ahora incluye tokens
+    user,
     token: jwtToken,
   };
 };

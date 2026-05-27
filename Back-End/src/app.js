@@ -5,24 +5,27 @@ import env from "./config/env.js";
 import { query } from "./config/db.js";
 
 // 🧱 Models (DDL scripts)
-import { createUsersTable } from "./modules/users/user.model.js";
+import { createUsersTable }   from "./modules/users/user.model.js";
 import { createProfilesTable } from "./modules/onboarding/profile.model.js";
-import { createPlansTable } from "./modules/plans/plan.model.js";
+import { createPlansTable }   from "./modules/plans/plan.model.js";
 import { createReviewsTable } from "./modules/reviews/review.schema.js";
 
 // 🔐 Routes
-import authRoutes from "./modules/auth/auth.routes.js";
-import userRoutes from "./modules/users/user.routes.js";
+import authRoutes    from "./modules/auth/auth.routes.js";
+import userRoutes    from "./modules/users/user.routes.js";
 import profileRoutes from "./modules/onboarding/profile.routes.js";
-import planRoutes from "./modules/plans/plan.routes.js";
-import reviewRoutes from "./modules/reviews/review.routes.js";
-import mfaRoutes from "./modules/mfa/mfa.routes.js";
+import planRoutes    from "./modules/plans/plan.routes.js";
+import reviewRoutes  from "./modules/reviews/review.routes.js";
+import mfaRoutes     from "./modules/mfa/mfa.routes.js";
 
 // 🧠 AI
 import aiRoutes from "./modules/ai/ai.routes.js";
 
 // 💳 PAYMENTS
 import paymentRoutes from "./modules/payments/payment.routes.js";
+
+// 🛡 ADMIN
+import adminRoutes from "./modules/admin/admin.routes.js";
 
 // 🧠 Utils
 import { logInfo, logSuccess, logError } from "./utils/logger.js";
@@ -93,6 +96,9 @@ app.use("/api/ai", aiRoutes);
 
 // 💳 PAYMENTS (Stripe)
 app.use("/api/payments", paymentRoutes);
+
+// 🛡 ADMIN (superadmin only)
+app.use("/api/admin", adminRoutes);
 
 logSuccess("APP", "Rutas registradas correctamente");
 

@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import env from "../../config/env.js";
+import { query } from "../../config/db.js";
 import { addTokensToUser } from "./payment.service.js";
 import { sendPaymentSuccessEmail, sendPaymentFailedEmail } from "../../utils/email.service.js";
 import { logInfo, logSuccess, logError } from "../../utils/logger.js";
@@ -22,32 +23,51 @@ function formatDate(unixSeconds) {
   });
 }
 
-// ── Manejadores de eventos ────────────────────────────────────────────────────
+// ── Manejadores ───────────────────────────────────────────────────────────────
 
 async function handlePaymentSucceeded(intent) {
   const { id, amount, currency, metadata } = intent;
-  const { userId, tokens, userEmail, userName, planName } = metadata;
+  const { userId, tokens, userEmail, userName, planName, planKey } = metadata;
 
-  // 1. Sumar tokens al usuario
   if (!userId || !tokens) {
     logError("WEBHOOK", "Metadata incompleta en payment_intent.succeeded", metadata);
     throw new Error("Missing metadata: userId or tokens");
   }
 
+  // 1. Sumar tokens al usuario
   await addTokensToUser(Number(userId), Number(tokens));
   logSuccess("WEBHOOK", `Tokens agregados | userId: ${userId} | tokens: ${tokens}`);
 
-  // 2. Enviar email con factura PDF (solo si hay email en metadata)
+  // 2. ✅ Registrar orden en DB
+  await query(
+    `INSERT INTO orders
+       (user_id, stripe_id, plan_key, plan_name, amount, currency, status, user_email, user_name)
+     VALUES ($1, $2, $3, $4, $5, $6, 'succeeded', $7, $8)
+     ON CONFLICT (stripe_id) DO NOTHING`,
+    [
+      Number(userId),
+      id,
+      planKey  || "unknown",
+      planName || "Unknown Plan",
+      amount / 100,   // Stripe guarda en centavos
+      currency,
+      userEmail || null,
+      userName  || null,
+    ]
+  );
+  logSuccess("WEBHOOK", `Orden registrada en DB | stripe_id: ${id}`);
+
+  // 3. Enviar email de confirmación
   if (userEmail) {
     await sendPaymentSuccessEmail({
-      to: userEmail,
-      userName: userName || "Cliente",
-      plan: planName || "Premium",
+      to:            userEmail,
+      userName:      userName || "Cliente",
+      plan:          planName || "Premium",
       amount,
       currency,
       invoiceNumber: buildInvoiceNumber(id),
-      paymentDate: formatDate(intent.created),
-      dashboardUrl: `${env.FRONTEND_URL}/dashboard`,
+      paymentDate:   formatDate(intent.created),
+      dashboardUrl:  `${env.FRONTEND_URL}/dashboard`,
     });
     logSuccess("WEBHOOK", `Email de confirmación enviado a ${userEmail}`);
   } else {
@@ -57,21 +77,43 @@ async function handlePaymentSucceeded(intent) {
 
 async function handlePaymentFailed(intent) {
   const { id, amount, currency, metadata, last_payment_error } = intent;
-  const { userEmail, userName, planName } = metadata;
+  const { userId, userEmail, userName, planName, planKey } = metadata;
 
   logError("WEBHOOK", `Pago fallido | id: ${id} | motivo: ${last_payment_error?.message}`);
 
+  // ✅ Registrar fallo en DB
+  if (userId) {
+    await query(
+      `INSERT INTO orders
+         (user_id, stripe_id, plan_key, plan_name, amount, currency, status, user_email, user_name)
+       VALUES ($1, $2, $3, $4, $5, $6, 'failed', $7, $8)
+       ON CONFLICT (stripe_id) DO NOTHING`,
+      [
+        Number(userId),
+        id,
+        planKey  || "unknown",
+        planName || "Unknown Plan",
+        amount / 100,
+        currency,
+        userEmail || null,
+        userName  || null,
+      ]
+    );
+    logInfo("WEBHOOK", `Orden fallida registrada en DB | stripe_id: ${id}`);
+  }
+
+  // Email de pago fallido
   if (userEmail) {
     await sendPaymentFailedEmail({
-      to: userEmail,
-      userName: userName || "Cliente",
-      plan: planName || "Premium",
+      to:            userEmail,
+      userName:      userName || "Cliente",
+      plan:          planName || "Premium",
       amount,
       currency,
       invoiceNumber: buildInvoiceNumber(id),
-      paymentDate: formatDate(intent.created),
+      paymentDate:   formatDate(intent.created),
       failureReason: last_payment_error?.message || "Error desconocido",
-      billingUrl: `${env.FRONTEND_URL}/billing`,
+      billingUrl:    `${env.FRONTEND_URL}/billing`,
     });
     logSuccess("WEBHOOK", `Email de pago fallido enviado a ${userEmail}`);
   }
@@ -113,7 +155,6 @@ export const handleWebhook = async (req, res) => {
     }
   } catch (err) {
     logError("WEBHOOK", `Error procesando ${event.type}`, err.message);
-    // Respondemos 200 igual — Stripe no debe reintentar por errores internos
     return res.status(200).json({ received: true, warning: err.message });
   }
 
