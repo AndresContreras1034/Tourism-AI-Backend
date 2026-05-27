@@ -25,7 +25,7 @@ const startServer = () => {
       console.log(`🌐 URL: http://localhost:${PORT}`);
       console.log("--------------------------------\n");
 
-      logSuccess("SERVER", `API lista en http://localhost:${PORT}`);
+console.log(`API lista en puerto ${PORT}`)
     });
 
     /* =========================================================

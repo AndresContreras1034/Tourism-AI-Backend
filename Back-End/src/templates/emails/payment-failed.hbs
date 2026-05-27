@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pago fallido - Tourism AI</title>
+</head>
+<body style="margin:0;padding:0;background-color:#12131C;font-family:Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#12131C;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <!-- Card -->
+        <table width="480" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:480px;width:100%;background-color:#1A1B2E;border-radius:16px;border:1px solid #3A1A1A;">
+
+          <!-- Top accent line (red) -->
+          <tr>
+            <td style="height:3px;background-color:#EF4444;border-radius:16px 16px 0 0;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <tr><td style="height:36px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- X icon -->
+          <tr>
+            <td align="center" style="padding:0 40px;">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="72" height="72" align="center" valign="middle"
+                      style="width:72px;height:72px;border-radius:50%;background-color:#2A0F0F;border:2px solid #EF4444;text-align:center;vertical-align:middle;">
+                    <span style="font-size:28px;color:#EF4444;line-height:72px;font-weight:bold;">✕</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="height:20px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- Title -->
+          <tr>
+            <td align="center" style="padding:0 40px;">
+              <p style="margin:0;font-size:22px;font-weight:bold;color:#FFFFFF;font-family:Arial,sans-serif;">Pago fallido</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:8px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- Subtitle -->
+          <tr>
+            <td align="center" style="padding:0 40px;">
+              <p style="margin:0;font-size:14px;color:#8B90B8;font-family:Arial,sans-serif;">No pudimos procesar tu transacción</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:14px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- Error reason pill -->
+          <tr>
+            <td align="center" style="padding:0 40px;">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background-color:#2A1010;border:1px solid #7B2020;border-radius:99px;padding:5px 14px;">
+                    <p style="margin:0;font-size:12px;color:#FF6B6B;font-family:Arial,sans-serif;">⚠ {{errorReason}}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="height:24px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- Details box -->
+          <tr>
+            <td style="padding:0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#16172A;border-radius:12px;border:1px solid #261C39;">
+                <tr><td style="height:14px;font-size:0;">&nbsp;</td></tr>
+
+                <!-- Referencia -->
+                <tr>
+                  <td style="padding:6px 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#8B90B8;font-family:Arial,sans-serif;">Referencia</td>
+                        <td align="right" style="font-size:13px;color:#FFFFFF;font-weight:bold;font-family:Arial,sans-serif;">{{invoiceNumber}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr><td style="padding:0 16px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background-color:#1F2040;font-size:0;">&nbsp;</td></tr></table></td></tr>
+
+                <!-- Plan -->
+                <tr>
+                  <td style="padding:6px 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#8B90B8;font-family:Arial,sans-serif;">Plan</td>
+                        <td align="right" style="font-size:13px;color:#FFFFFF;font-weight:bold;font-family:Arial,sans-serif;">{{plan}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr><td style="padding:0 16px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background-color:#1F2040;font-size:0;">&nbsp;</td></tr></table></td></tr>
+
+                <!-- Monto -->
+                <tr>
+                  <td style="padding:6px 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#8B90B8;font-family:Arial,sans-serif;">Monto intentado</td>
+                        <td align="right" style="font-size:15px;color:#FF6B6B;font-weight:bold;font-family:Arial,sans-serif;">{{currency}} {{amount}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr><td style="padding:0 16px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background-color:#1F2040;font-size:0;">&nbsp;</td></tr></table></td></tr>
+
+                <!-- Fecha -->
+                <tr>
+                  <td style="padding:6px 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#8B90B8;font-family:Arial,sans-serif;">Fecha</td>
+                        <td align="right" style="font-size:13px;color:#FFFFFF;font-weight:bold;font-family:Arial,sans-serif;">{{date}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr><td style="padding:0 16px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background-color:#1F2040;font-size:0;">&nbsp;</td></tr></table></td></tr>
+
+                <!-- Estado -->
+                <tr>
+                  <td style="padding:6px 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#8B90B8;font-family:Arial,sans-serif;">Estado</td>
+                        <td align="right">
+                          <span style="display:inline-block;background-color:#2A0F0F;border:1px solid #EF4444;color:#FF6B6B;font-size:11px;font-weight:bold;font-family:Arial,sans-serif;padding:3px 10px;border-radius:99px;">● Fallido</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr><td style="height:14px;font-size:0;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="height:28px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:0 32px;">
+              <p style="margin:0;font-size:11px;color:#5E6285;font-family:Arial,sans-serif;">
+                ¿Necesitas ayuda? Escríbenos a
+                <a href="mailto:soporte@tourism-ai.com" style="color:#EF4444;text-decoration:none;">soporte@tourism-ai.com</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr><td style="height:32px;font-size:0;">&nbsp;</td></tr>
+
+        </table>
+        <!-- /Card -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

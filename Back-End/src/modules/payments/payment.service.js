@@ -23,15 +23,31 @@ export const createPaymentIntent = async (planKey, userId) => {
     throw new Error(`Plan inválido: ${planKey}`);
   }
 
+  // 👤 Obtener datos del usuario para la factura
+  const userResult = await query(
+    `SELECT name, email FROM users WHERE id = $1`,
+    [userId]
+  );
+
+  const user = userResult.rows[0];
+
+  if (!user) {
+    throw new Error(`Usuario no encontrado: ${userId}`);
+  }
+
   console.log(`💳 [PAYMENT] Creando intent para plan ${planKey} - usuario ${userId}`);
 
   const paymentIntent = await stripe.paymentIntents.create({
     amount:   plan.amount,
     currency: plan.currency,
     metadata: {
-      userId:   String(userId),
+      userId:    String(userId),
       planKey,
-      tokens:   String(plan.tokens),
+      tokens:    String(plan.tokens),
+      // ✅ Campos necesarios para el email y el PDF
+      userEmail: user.email,
+      userName:  user.name,
+      planName:  plan.label,
     },
   });
 

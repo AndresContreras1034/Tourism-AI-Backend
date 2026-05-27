@@ -2,7 +2,7 @@ import axios from "axios";
 import { mapProfileToEngine } from "./recommendation.mapper.js";
 import { query } from "../../config/db.js";
 
-const PYTHON_AI_URL = "http://localhost:8000";
+const PYTHON_AI_URL = process.env.PYTHON_AI_URL;
 
 // ======================================================
 // 💰 TOKENS HELPERS
