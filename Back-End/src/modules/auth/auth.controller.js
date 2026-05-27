@@ -1,5 +1,3 @@
-// auth.controller.js
-
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -80,7 +78,7 @@ export const login = async (req, res) => {
 
     // 🔥 LOGIN DIRECTO (SIN MFA)
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, role: user.role }, // 👈 agrega role
       env.JWT_SECRET,
       { expiresIn: env.JWT_EXPIRES_IN || "7d" }
     );
@@ -89,12 +87,12 @@ export const login = async (req, res) => {
       success: true,
       requiresMFA: false,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
+        id:          user.id,
+        email:       user.email,
+        name:        user.name,
+        role:        user.role,
         mfa_enabled: user.mfa_enabled,
-        tokens: user.tokens,   // 👈 FIX
+        tokens:      user.tokens,
       },
       token,
     });
@@ -118,18 +116,17 @@ export const verifyMfaLogin = async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, email, role, name, mfa_enabled, tokens   -- 👈 FIX
+      `SELECT id, email, role, name, mfa_enabled, tokens
        FROM users
        WHERE id = $1`,
       [userId]
     );
 
     const user = result.rows[0];
-      console.log("🔍 USER FROM DB:", user); // 👈 agrega aquí
-
+    console.log("🔍 USER FROM DB:", user);
 
     const jwtToken = jwt.sign(
-      { id: user.id, email: user.email, mfa: true },
+      { id: user.id, email: user.email, role: user.role, mfa: true }, // 👈 agrega role
       env.JWT_SECRET,
       { expiresIn: env.JWT_EXPIRES_IN || "7d" }
     );
@@ -149,7 +146,7 @@ export const me = async (req, res) => {
     const userId = req.user.id;
 
     const result = await query(
-      `SELECT id, email, role, name, mfa_enabled, tokens   -- 👈 FIX
+      `SELECT id, email, role, name, mfa_enabled, tokens
        FROM users WHERE id = $1`,
       [userId]
     );

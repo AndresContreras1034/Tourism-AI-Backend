@@ -38,7 +38,7 @@ export const registerUser = async ({ email, password, name }) => {
 };
 
 // =========================
-// 🔑 LOGIN (MFA OBLIGATORIO)
+// 🔑 LOGIN
 // =========================
 export const loginUser = async ({ email, password }) => {
   console.log("🔑 [AUTH] Login iniciado");
@@ -62,21 +62,56 @@ export const loginUser = async ({ email, password }) => {
 
   console.log("🟢 [AUTH] Credenciales válidas");
 
-  const tempToken = jwt.sign(
+  // ==============================
+  // 🔐 MFA HABILITADO → flujo MFA
+  // ==============================
+  if (user.mfa_enabled) {
+    console.log("🔐 [AUTH] MFA habilitado → flujo MFA");
+
+    const tempToken = jwt.sign(
+      {
+        id:        user.id,
+        email:     user.email,
+        mfa_stage: "pending",
+      },
+      env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    return {
+      requiresMFA: true,
+      userId:      user.id,
+      tempToken,
+      message:     "MFA required",
+    };
+  }
+
+  // ==============================
+  // ✅ SIN MFA → token completo
+  // ==============================
+  console.log("✅ [AUTH] Sin MFA → generando token completo con role:", user.role);
+
+  const jwtToken = jwt.sign(
     {
-      id: user.id,
-      email: user.email,
-      mfa_stage: "pending",
+      id:           user.id,
+      email:        user.email,
+      role:         user.role,       // 👈 crítico para admin middleware
+      mfa_verified: false,
     },
     env.JWT_SECRET,
-    { expiresIn: "10m" }
+    { expiresIn: env.JWT_EXPIRES_IN }
   );
 
   return {
-    requiresMFA: true,
-    userId: user.id,
-    tempToken,
-    message: "MFA required",
+    user: {
+      id:          user.id,
+      email:       user.email,
+      name:        user.name,
+      role:        user.role,
+      tokens:      user.tokens,
+      mfa_enabled: user.mfa_enabled,
+    },
+    token: jwtToken,
   };
 };
 
@@ -90,9 +125,8 @@ export const verifyMfaLogin = async ({ userId, token }) => {
     throw new Error("Invalid MFA code");
   }
 
-  // ✅ Incluye role para el JWT
   const result = await query(
-    "SELECT id, email, name, role, tokens FROM users WHERE id = $1",
+    "SELECT id, email, name, role, tokens, mfa_enabled FROM users WHERE id = $1",
     [userId]
   );
 
@@ -110,7 +144,14 @@ export const verifyMfaLogin = async ({ userId, token }) => {
   );
 
   return {
-    user,
+    user: {
+      id:          user.id,
+      email:       user.email,
+      name:        user.name,
+      role:        user.role,
+      tokens:      user.tokens,
+      mfa_enabled: user.mfa_enabled,
+    },
     token: jwtToken,
-  };
-};
+  
+}}
