@@ -27,6 +27,9 @@ import paymentRoutes from "./modules/payments/payment.routes.js";
 // 🛡 ADMIN
 import adminRoutes from "./modules/admin/admin.routes.js";
 
+// 📊 ANALYTICS
+import analyticsRoutes from "./modules/analytics/analytics.routes.js";
+
 // 🧠 Utils
 import { logInfo, logSuccess, logError } from "./utils/logger.js";
 import errorMiddleware from "./middleware/error.middleware.js";
@@ -99,6 +102,9 @@ app.use("/api/payments", paymentRoutes);
 
 // 🛡 ADMIN (superadmin only)
 app.use("/api/admin", adminRoutes);
+
+// 📊 ANALYTICS
+app.use("/api/analytics", analyticsRoutes);
 
 logSuccess("APP", "Rutas registradas correctamente");
 

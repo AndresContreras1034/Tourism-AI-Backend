@@ -7,8 +7,7 @@ console.log("🧭 [PLAN SERVICE] Inicializado");
 // =====================================================
 // 🌐 CONFIG FASTAPI
 // =====================================================
-const AI_SERVICE_URL =
-  process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
 
 // =====================================================
 // 🌐 FASTAPI CALL (SAFE)
@@ -29,19 +28,11 @@ const getRecommendationsFromFastAPI = async (filters) => {
 
     console.log("🟢 [FASTAPI RESPONSE RAW]:", response.data);
 
-    return response.data || {
-      transport: [],
-      map_points: [],
-      insights: [],
-    };
+    return response.data || { transport: [], map_points: [], insights: [] };
 
   } catch (error) {
     console.error("❌ [FASTAPI ERROR]:", error.message);
-    return {
-      transport: [],
-      map_points: [],
-      insights: [],
-    };
+    return { transport: [], map_points: [], insights: [] };
   }
 };
 
@@ -53,7 +44,6 @@ export const getPlanById = async (id, user) => {
     console.log("🔥 =====================================");
     console.log("🧠 [PLAN SERVICE] START");
     console.log("🔥 =====================================");
-
     console.log("🧾 PLAN ID:", id);
     console.log("👤 USER:", user?.id);
 
@@ -65,10 +55,7 @@ export const getPlanById = async (id, user) => {
       title: "Plan generado",
       location: {
         name: "Bogotá",
-        coordinates: {
-          lat: 4.7110,
-          lng: -74.0721,
-        },
+        coordinates: { lat: 4.7110, lng: -74.0721 },
       },
       score: 4.5,
       transport: [],
@@ -81,16 +68,15 @@ export const getPlanById = async (id, user) => {
     // 2. FILTERS FOR FASTAPI
     // =====================================================
     const filters = {
-      userId: user?.id,
+      userId:   user?.id,
       location: seed.location.name,
-      planId: id,
+      planId:   id,
     };
 
     // =====================================================
     // 3. FASTAPI CALL
     // =====================================================
     const recommendations = await getRecommendationsFromFastAPI(filters);
-
     console.log("📡 FASTAPI RESULT:", recommendations);
 
     // =====================================================
@@ -98,28 +84,33 @@ export const getPlanById = async (id, user) => {
     // =====================================================
     const enrichedSeed = {
       ...seed,
-      transport: recommendations?.transport || [],
+      transport:  recommendations?.transport  || [],
       map_points: recommendations?.map_points || [],
-      insights:   recommendations?.insights  || [],
+      insights:   recommendations?.insights   || [],
     };
 
     console.log("🧩 ENRICHED SEED:", enrichedSeed);
 
     // =====================================================
-    // 5. ORCHESTRATOR CALL (CRITICAL)
+    // 5. ORCHESTRATOR CALL
+    // Retorna { plan, tokens_used } con tokens reales de DeepSeek
     // =====================================================
     let finalPlan;
+    let tokens_used = 0;
 
     try {
       console.log("🧠 CALLING ORCHESTRATOR...");
 
-      finalPlan = await buildFullPlan({
+      const result = await buildFullPlan({
         user,
         location: seed.location,
-        seed: enrichedSeed,
+        seed:     enrichedSeed,
       });
 
-      console.log("🟢 ORCHESTRATOR SUCCESS");
+      finalPlan   = result.plan;
+      tokens_used = result.tokens_used ?? 0;
+
+      console.log(`🟢 ORCHESTRATOR SUCCESS — tokens: ${tokens_used}`);
 
     } catch (err) {
       console.error("❌ ORCHESTRATOR CRASH:", err.message);
@@ -127,21 +118,22 @@ export const getPlanById = async (id, user) => {
     }
 
     // =====================================================
-    // 5.5 💾 PERSISTIR EN DB
+    // 5.5 💾 PERSISTIR EN DB con tokens reales
     // =====================================================
     try {
       await query(
         `INSERT INTO plans
            (user_id, title, description, location_suggestion, source, tokens_used)
-         VALUES ($1, $2, $3, $4, 'ai', 1)`,
+         VALUES ($1, $2, $3, $4, 'ai', $5)`,
         [
           user.id,
-          finalPlan.title        ?? "Plan generado",
+          finalPlan.title               ?? "Plan generado",
           finalPlan.ai_context?.summary ?? null,
           finalPlan.location?.name      ?? null,
+          tokens_used,                        // ✅ tokens reales, no hardcodeado
         ]
       );
-      console.log("💾 [PLAN SERVICE] Plan persistido en DB — user:", user.id);
+      console.log(`💾 [PLAN SERVICE] Plan persistido — user: ${user.id} | tokens: ${tokens_used}`);
     } catch (dbErr) {
       console.error("⚠️ [PLAN SERVICE] Error guardando en DB:", dbErr.message);
       // No rompemos el flujo: el usuario igual recibe su plan
@@ -151,35 +143,21 @@ export const getPlanById = async (id, user) => {
     // 6. RETURN FINAL
     // =====================================================
     console.log("🎯 FINAL PLAN READY");
-
     return finalPlan;
 
   } catch (error) {
     console.error("❌ [PLAN SERVICE FATAL ERROR]:", error.message);
 
     return {
-      title: "Error generando plan",
-      location: {
-        name: "N/A",
-        coordinates: null,
-      },
-      ai_context: {
-        summary: "No se pudo generar el plan en este momento.",
-        local_insight: "",
-      },
-      transport: [],
+      title:      "Error generando plan",
+      location:   { name: "N/A", coordinates: null },
+      ai_context: { summary: "No se pudo generar el plan en este momento.", local_insight: "" },
+      transport:  [],
       map_points: [],
-      experience: {
-        description: "",
-        highlights: [],
-      },
+      experience: { description: "", highlights: [] },
       budget: {
         estimated_total: 0,
-        price_range: {
-          coffee: "N/A",
-          meal:   "N/A",
-          snack:  "N/A",
-        },
+        price_range: { coffee: "N/A", meal: "N/A", snack: "N/A" },
       },
       optimal_day: null,
       security:    null,

@@ -1,198 +1,144 @@
+import { buildTravelPrompt, buildChatPrompt } from "./prompt.builder.js";
+
 console.log("AI SERVICE OK");
-export { callDeepSeek };
-// ======================================================
-// 🔥 CONFIG
-// ======================================================
+
 const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
 
-// ======================================================
-// 🧠 SAFE JSON PARSER
-// ======================================================
+// ─── JSON parser robusto ──────────────────────────────────────────────────────
 const safeJSONParse = (text) => {
   try {
-    const cleaned = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
-    return JSON.parse(cleaned);
+    return JSON.parse(text.replace(/```json|```/g, "").trim());
   } catch (err) {
     console.error("❌ JSON parse failed:", err.message);
     return null;
   }
 };
 
-// ======================================================
-// 🧠 DEEPSEEK CALL
-// ======================================================
+// ─── Llamada base a DeepSeek ──────────────────────────────────────────────────
 const callDeepSeek = async (messages, temperature = 0.5) => {
   try {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("📡 [DEEPSEEK] Request");
-
     const response = await fetch(DEEPSEEK_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages,
-        temperature,
-      }),
+      body: JSON.stringify({ model: "deepseek-chat", messages, temperature }),
     });
 
     const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
 
-    if (!content) {
-      console.log("❌ Empty response from DeepSeek");
-      return null;
-    }
+    // Devuelve contenido + tokens para poder guardarlos
+    const content      = data?.choices?.[0]?.message?.content ?? null;
+    const tokens_used  = data?.usage?.total_tokens            ?? 0;
 
-    return content;
+    if (!content) console.error("❌ Empty response from DeepSeek");
+
+    return { content, tokens_used };
 
   } catch (error) {
     console.error("❌ DeepSeek error:", error);
-    return null;
-  } finally {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    return { content: null, tokens_used: 0 };
   }
 };
 
-// ======================================================
-// 💬 CHATBOT (NO SE TOCA)
-// ======================================================
+export { callDeepSeek };
+
+// ─── Chatbot ──────────────────────────────────────────────────────────────────
+// buildChatPrompt ya tiene el system prompt incluido; lo mandamos como user msg
+// para no duplicar instrucciones.
 export const generateChatResponse = async (message) => {
-  const systemPrompt = `
-Eres un asistente experto en turismo y seguridad en Bogotá.
+  const prompt = buildChatPrompt(message);
 
-REGLAS:
-- Responde en Markdown
-- No uses HTML
-- Usa estructura clara con títulos y listas
-`;
-
-  const result = await callDeepSeek([
-    { role: "system", content: systemPrompt },
-    { role: "user", content: message },
+  const { content } = await callDeepSeek([
+    { role: "user", content: prompt },
   ]);
 
-  return result || "No pude generar respuesta en este momento.";
+  return content || "No pude generar respuesta en este momento.";
 };
 
-// ======================================================
-// 🧠 PLANS GENERATOR (YA ROBUSTO)
-// ======================================================
-import { buildTravelPrompt } from "./prompt.builder.js";
-
+// ─── Generador de planes ──────────────────────────────────────────────────────
+// UN SOLO system prompt: "responde solo JSON".
+// El schema completo ya está en buildTravelPrompt (prompt.builder.js).
 export const generatePlans = async (profile) => {
   console.log("🧠 [AI PLANS] Generating...");
 
-  const prompt = buildTravelPrompt(profile);
-
-  const systemPrompt = `
-Devuelve SOLO JSON válido SIN markdown ni texto adicional.
-
-FORMATO OBLIGATORIO:
-{
-  "plans": [
-    {
-      "title": "string",
-      "description": "string",
-      "estimatedPrice": number,
-      "activities": ["string"],
-      "locationSuggestion": "string"
-    }
-  ]
-}
-`;
-
-  const raw = await callDeepSeek([
-    { role: "system", content: systemPrompt },
-    { role: "user", content: prompt },
-  ], 0.7);
+  const { content: raw, tokens_used } = await callDeepSeek(
+    [
+      {
+        role: "system",
+        content: "Responde SOLO con JSON válido, sin markdown ni texto adicional.",
+      },
+      {
+        role: "user",
+        content: buildTravelPrompt(profile),
+      },
+    ],
+    0.7
+  );
 
   if (!raw) {
-    return {
-      plans: [],
-      error: "No response from AI",
-    };
+    return { plans: [], tokens_used: 0, error: "No response from AI" };
   }
-
-  console.log("📦 RAW:", raw);
 
   const parsed = safeJSONParse(raw);
 
-  if (!parsed || !parsed.plans) {
-    console.log("⚠️ Invalid JSON structure fallback");
-
+  if (!parsed?.plans) {
+    console.warn("⚠️ Invalid JSON structure — fallback activado");
     return {
       plans: [
         {
-          title: "Plan temporal",
-          description: "La IA no devolvió datos válidos",
-          estimatedPrice: 0,
-          activities: [],
+          title:              "Plan temporal",
+          description:        "La IA no devolvió datos válidos",
+          estimatedPrice:     0,
+          activities:         [],
           locationSuggestion: "N/A",
         },
       ],
+      tokens_used,
       error: "Invalid AI response",
     };
   }
 
-  console.log("🟢 [AI PLANS OK]");
-
-  return parsed;
+  console.log(`🟢 [AI PLANS OK] tokens: ${tokens_used}`);
+  return { ...parsed, tokens_used };
 };
 
-// ======================================================
-// 🧠 ORCHESTRATOR SUPPORT FUNCTIONS (FALTANTES - CRÍTICO)
-// ======================================================
+// ─── Funciones de soporte para el orchestrator ────────────────────────────────
+export const buildExperience = async (seed) => ({
+  summary:     `Experiencia en ${seed?.location?.name || "destino turístico"}`,
+  insight:     "Zona con alta actividad cultural y turística",
+  description: "Experiencia generada por IA",
+  highlights:  ["Cultura", "Gastronomía", "Historia"],
+});
 
-export const buildExperience = async (seed, user) => {
-  return {
-    summary: `Experiencia en ${seed?.location?.name || "destino turístico"}`,
-    insight: "Zona con alta actividad cultural y turística",
-    description: "Experiencia generada por IA",
-    highlights: ["Cultura", "Gastronomía", "Historia"],
-  };
-};
+export const buildBudget = async () => ({
+  estimated_total: 120000,
+  price_range: {
+    coffee: "5k - 10k COP",
+    meal:   "20k - 50k COP",
+    snack:  "3k - 8k COP",
+  },
+});
 
-export const buildBudget = async (seed, user) => {
-  return {
-    estimated_total: 120000,
-    price_range: {
-      coffee: "5k - 10k COP",
-      meal: "20k - 50k COP",
-      snack: "3k - 8k COP",
-    },
-  };
-};
+export const buildSecurity = async () => ({
+  level:          "medium",
+  recommendation: "Zona generalmente segura con precaución básica",
+  tips: [
+    "Evita calles solitarias de noche",
+    "Usa transporte confiable",
+    "Mantén objetos personales seguros",
+  ],
+});
 
-export const buildSecurity = async (location) => {
-  return {
-    level: "medium",
-    recommendation: "Zona generalmente segura con precaución básica",
-    tips: [
-      "Evita calles solitarias de noche",
-      "Usa transporte confiable",
-      "Mantén objetos personales seguros",
-    ],
-  };
-};
-
-export const buildOptimalDay = async (location, seed) => {
-  return {
-    date: "Sábado recomendado",
-    weather: {
-      condition: "Parcialmente nublado",
-      temp_min: 14,
-      temp_max: 22,
-      precip_probability: 20,
-      icon: "⛅",
-    },
-    reason: "Mejor clima y menor congestión turística",
-  };
-};
+export const buildOptimalDay = async () => ({
+  date: "Sábado recomendado",
+  weather: {
+    condition:          "Parcialmente nublado",
+    temp_min:           14,
+    temp_max:           22,
+    precip_probability: 20,
+    icon:               "⛅",
+  },
+  reason: "Mejor clima y menor congestión turística",
+});
