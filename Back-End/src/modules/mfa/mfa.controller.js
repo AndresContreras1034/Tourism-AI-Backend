@@ -6,10 +6,17 @@ const logger = require("../../utils/logger");
 // =========================
 exports.setup = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ✅ FIX: fallback a req.body.userId si el tempToken no tiene id válido
+    const userId = req.user?.id || req.body.userId;
 
-    const result =
-      await mfaService.generateSetup(userId);
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId requerido",
+      });
+    }
+
+    const result = await mfaService.generateSetup(userId);
 
     return res.status(200).json({
       success: true,
@@ -22,12 +29,7 @@ exports.setup = async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error(
-      "SETUP ERROR:",
-      error
-    );
-
+    console.error("SETUP ERROR:", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -38,239 +40,133 @@ exports.setup = async (req, res) => {
 // =========================
 // 🔐 VERIFY SETUP
 // =========================
-exports.verifySetup = async (req,res)=>{
+exports.verifySetup = async (req, res) => {
+  try {
+    console.log("=== VERIFY SETUP ===");
+    console.log("USER:", req.user);
+    console.log("BODY:", req.body);
 
-  try{
+    // ✅ FIX: mismo fallback que setup
+    const userId = req.user?.id || req.body.userId;
+    const { token } = req.body;
 
-    console.log(
-      "=== VERIFY SETUP ==="
-    );
-
-    console.log(
-      "USER:",
-      req.user
-    );
-
-    console.log(
-      "BODY:",
-      req.body
-    );
-
-    const userId =
-      req.user?.id;
-
-    const { token } =
-      req.body;
-
-    if(!userId)
+    if (!userId) {
       return res.status(400).json({
-        success:false,
-        message:"userId faltante"
+        success: false,
+        message: "userId faltante",
       });
-
-    if(!token)
-      return res.status(400).json({
-        success:false,
-        message:"token requerido"
-      });
-
-    const isValid =
-      await mfaService
-      .verifySetupToken(
-        userId,
-        token
-      );
-
-    console.log(
-      "VALID:",
-      isValid
-    );
-
-    if(!isValid){
-
-      return res.status(401)
-      .json({
-        success:false,
-        message:"Código inválido"
-      });
-
     }
 
-    await mfaService.enableMFA(
-      userId
-    );
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "token requerido",
+      });
+    }
 
-    console.log(
-      "✅ MFA ACTIVADO"
-    );
+    const isValid = await mfaService.verifySetupToken(userId, token);
 
-    return res.status(200)
-    .json({
-      success:true,
-      message:"MFA OK"
+    console.log("VALID:", isValid);
+
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Código inválido",
+      });
+    }
+
+    await mfaService.enableMFA(userId);
+
+    console.log("✅ MFA ACTIVADO");
+
+    return res.status(200).json({
+      success: true,
+      message: "MFA OK",
     });
 
-  }
-
-  catch(error){
-
-    console.error(
-      "VERIFY ERROR:",
-      error
-    );
-
-    console.error(
-      error.stack
-    );
-
-    return res.status(500)
-    .json({
-      success:false,
-      message:error.message
+  } catch (error) {
+    console.error("VERIFY ERROR:", error);
+    console.error(error.stack);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
-
   }
-
 };
 
 // =========================
 // 🔐 VERIFY LOGIN MFA
 // =========================
-exports.verifyLogin = async (req,res)=>{
+exports.verifyLogin = async (req, res) => {
+  try {
+    const { userId, token } = req.body;
 
-  try{
-
-    const {
-      userId,
-      token
-    } = req.body;
-
-    if(!userId || !token){
-
-      return res.status(400)
-      .json({
-        success:false,
-        message:
-        "userId y token requeridos"
+    if (!userId || !token) {
+      return res.status(400).json({
+        success: false,
+        message: "userId y token requeridos",
       });
-
     }
 
-    const isValid =
-      await mfaService
-      .verifyLoginToken(
-        userId,
-        token
-      );
+    const isValid = await mfaService.verifyLoginToken(userId, token);
 
-    if(!isValid){
-
-      return res.status(401)
-      .json({
-        success:false,
-        message:
-        "Código MFA inválido"
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Código MFA inválido",
       });
-
     }
 
-    const jwt =
-      await mfaService
-      .generateLoginToken(
-        userId
-      );
+    // ✅ FIX: generateLoginToken ahora devuelve { token, user }
+    const { token: jwtToken, user } = await mfaService.generateLoginToken(userId);
 
-    return res.status(200)
-    .json({
-
-      success:true,
-
-      message:
-      "MFA validado",
-
-      data:{
-        token:jwt
-      }
-
+    // ✅ FIX: devolver token y user en la raíz del response
+    // MfaVerify.jsx busca: data.token y data.user (no data.data.token)
+    return res.status(200).json({
+      success: true,
+      message: "MFA validado",
+      token: jwtToken,
+      user,
     });
 
-  }
-
-  catch(error){
-
-    console.error(
-      "LOGIN MFA ERROR:",
-      error
-    );
-
-    return res.status(500)
-    .json({
-      success:false,
-      message:error.message
+  } catch (error) {
+    console.error("LOGIN MFA ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
-
   }
-
 };
 
 // =========================
 // ❌ DISABLE MFA
 // =========================
-exports.disable = async (req,res)=>{
+exports.disable = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { token } = req.body;
 
-  try{
+    const isValid = await mfaService.verifyLoginToken(userId, token);
 
-    const userId =
-      req.user.id;
-
-    const { token } =
-      req.body;
-
-    const isValid =
-      await mfaService
-      .verifyLoginToken(
-        userId,
-        token
-      );
-
-    if(!isValid){
-
-      return res.status(401)
-      .json({
-        success:false,
-        message:
-        "Código inválido"
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Código inválido",
       });
-
     }
 
-    await mfaService
-    .disableMFA(
-      userId
-    );
+    await mfaService.disableMFA(userId);
 
-    return res.status(200)
-    .json({
-      success:true,
-      message:
-      "MFA desactivado"
+    return res.status(200).json({
+      success: true,
+      message: "MFA desactivado",
     });
 
-  }
-
-  catch(error){
-
-    console.error(
-      "DISABLE ERROR:",
-      error
-    );
-
-    return res.status(500)
-    .json({
-      success:false,
-      message:error.message
+  } catch (error) {
+    console.error("DISABLE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
-
   }
-
 };

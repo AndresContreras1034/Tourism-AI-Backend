@@ -8,7 +8,7 @@ import jwt from "../../utils/jwt.js";
 console.log("🔐 [MFA SERVICE] Inicializado");
 
 // =========================
-// 🔐 GENERAR SETUP MFA (FIXED)
+// 🔐 GENERAR SETUP MFA
 // =========================
 export const generateSetup = async (userId) => {
   console.log("🧪 [MFA] Generando setup para:", userId);
@@ -134,11 +134,28 @@ export const verifyLoginToken = async (userId, token) => {
 export const generateLoginToken = async (userId) => {
   const user = await userModel.getById(userId);
 
-  return jwt.generateToken({
+  // ✅ FIX 1: incluir role en el JWT
+  // sin role, las rutas de admin fallan porque req.user.role es undefined
+  const token = jwt.generateToken({
     id: user.id,
     email: user.email,
+    role: user.role,
     mfa_verified: true,
   });
+
+  // ✅ FIX 2: devolver { token, user } en lugar de solo el token
+  // el controller necesita ambos para responderle al frontend
+  return {
+    token,
+    user: {
+      id:          user.id,
+      email:       user.email,
+      name:        user.name,
+      role:        user.role,
+      mfa_enabled: user.mfa_enabled,
+      tokens:      user.tokens,
+    },
+  };
 };
 
 // =========================
