@@ -1,0 +1,4 @@
+<step title="Incoming Request" date="2026-05-28T03:08:32.717" instance="6192c1" url="/dump" method="GET" type="request" pid="767,1,17" Host="tourism-search-api.scm.azurewebsites.net" User-Agent="AZURECLI/2.86.0 (MSI)" Accept-Encoding="identity" Authorization="Bea..." x-ms-client-request-id="64f27a7f-5a42-11f1-b411-74563c701387" X-ARR-LOG-ID="64f27a7f-5a42-11f1-b411-74563c701387" CLIENT-IP="201.244.250.126:29336" X-SITE-DEPLOYMENT-ID="tourism-search-api" WAS-DEFAULT-HOSTNAME="tourism-search-api.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/dump" X-Client-IP="201.244.250.126" X-Client-Port="29336" >
+  <step title="Cleanup Xml Logs" date="2026-05-28T03:08:32.748" /><!-- duration: 128ms -->
+  <step title="Outgoing response" date="2026-05-28T03:08:34.188" type="response" statusCode="200" statusText="OK" /><!-- duration: 3ms -->
+</step><!-- duration: 1504ms -->

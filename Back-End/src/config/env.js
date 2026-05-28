@@ -1,13 +1,13 @@
 import dotenv from "dotenv";
 
-const result = dotenv.config();
-
-if (result.error) {
-  console.error("🔴 [ENV] Error cargando .env:", result.error.message);
-  throw result.error;
+if (process.env.NODE_ENV !== "production") {
+  const result = dotenv.config();
+  if (result.error) {
+    console.error("🔴 [ENV] Error cargando .env:", result.error.message);
+    throw result.error;
+  }
+  console.log("🟢 [ENV] .env cargado correctamente");
 }
-
-console.log("🟢 [ENV] .env cargado correctamente");
 
 const getEnv = (key, required = true, defaultValue = undefined) => {
   const value = process.env[key];
