@@ -30,11 +30,16 @@ export const getProductStats = async () => {
     FROM plans
   `);
 
+  const tokens = await query(`
+    SELECT COALESCE(SUM(tokens_used), 0) AS total_tokens FROM plans
+  `);
+
   return {
     total_plans:        Number(total.rows[0].total_plans),
     by_source:          bySource.rows,
     top_destinations:   topDestinations.rows,
     avg_plans_per_user: perUser.rows[0].avg_plans_per_user,
+    total_tokens:       Number(tokens.rows[0].total_tokens),
   };
 };
 

@@ -12,22 +12,43 @@ const getUserTokens = async (userId) => {
     "SELECT tokens FROM users WHERE id = $1",
     [userId]
   );
-
   return result.rows[0]?.tokens ?? 0;
 };
 
 const deductToken = async (userId) => {
   const result = await query(
-    `
-    UPDATE users
-    SET tokens = tokens - 1
-    WHERE id = $1 AND tokens > 0
-    RETURNING tokens
-    `,
+    `UPDATE users
+     SET tokens = tokens - 1
+     WHERE id = $1 AND tokens > 0
+     RETURNING tokens`,
     [userId]
   );
-
   return result.rows[0]?.tokens ?? null;
+};
+
+// ======================================================
+// 💾 GUARDAR PLANES EN DB (después de respuesta Python)
+// ======================================================
+const savePlans = async (userId, recommendations, profile) => {
+  try {
+    const plans = recommendations || [];
+
+    for (const plan of plans) {
+      await query(
+        `INSERT INTO plans (user_id, title, location_suggestion, source, tokens_used)
+         VALUES ($1, $2, $3, 'ai', 0)`,
+        [
+          userId,
+          plan.plan_turistico_bogota || `Plan ${profile.tipo_viaje || "turístico"}`,
+          plan.plan_turistico_bogota || "Bogotá",
+        ]
+      );
+    }
+
+    console.log(`💾 [RECOMMENDATIONS] ${plans.length} planes guardados en DB — user:`, userId);
+  } catch (dbErr) {
+    console.error("⚠️ [RECOMMENDATIONS] Error guardando planes:", dbErr.message);
+  }
 };
 
 // ======================================================
@@ -55,7 +76,7 @@ export const getRecommendations = async (profile, userId) => {
     }
 
     // ======================================================
-    // ➖ DESCONTAR TOKEN
+    // ➖ DESCONTAR TOKEN (1 token = 1 generación de 3 planes)
     // ======================================================
     const updatedTokens = await deductToken(userId);
 
@@ -80,9 +101,21 @@ export const getRecommendations = async (profile, userId) => {
 
     console.log("🟢 AI RESPONSE OK");
 
+    const aiData = response.data;
+
+    // ======================================================
+    // 💾 PERSISTIR PLANES (con nombres reales de Python)
+    // ======================================================
+    const allPlans = [
+      ...(aiData?.recommendations || []),
+      ...(aiData?.bestMatch ? [aiData.bestMatch] : []),
+    ];
+
+    await savePlans(userId, allPlans, profile);
+
     return {
       success: true,
-      data: response.data,
+      data: aiData,
       remainingTokens: updatedTokens,
     };
 
@@ -97,5 +130,3 @@ export const getRecommendations = async (profile, userId) => {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   }
 };
-
-

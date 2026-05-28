@@ -1,5 +1,6 @@
 import axios from "axios";
 import { buildFullPlan } from "../ai/orchestrator/plan.orchestrator.service.js";
+import { query } from "../../config/db.js";
 
 console.log("🧭 [PLAN SERVICE] Inicializado");
 
@@ -21,9 +22,7 @@ const getRecommendationsFromFastAPI = async (filters) => {
       `${AI_SERVICE_URL}/recommendations`,
       filters,
       {
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         timeout: 8000,
       }
     );
@@ -38,7 +37,6 @@ const getRecommendationsFromFastAPI = async (filters) => {
 
   } catch (error) {
     console.error("❌ [FASTAPI ERROR]:", error.message);
-
     return {
       transport: [],
       map_points: [],
@@ -102,7 +100,7 @@ export const getPlanById = async (id, user) => {
       ...seed,
       transport: recommendations?.transport || [],
       map_points: recommendations?.map_points || [],
-      insights: recommendations?.insights || [],
+      insights:   recommendations?.insights  || [],
     };
 
     console.log("🧩 ENRICHED SEED:", enrichedSeed);
@@ -126,6 +124,27 @@ export const getPlanById = async (id, user) => {
     } catch (err) {
       console.error("❌ ORCHESTRATOR CRASH:", err.message);
       throw err;
+    }
+
+    // =====================================================
+    // 5.5 💾 PERSISTIR EN DB
+    // =====================================================
+    try {
+      await query(
+        `INSERT INTO plans
+           (user_id, title, description, location_suggestion, source, tokens_used)
+         VALUES ($1, $2, $3, $4, 'ai', 1)`,
+        [
+          user.id,
+          finalPlan.title        ?? "Plan generado",
+          finalPlan.ai_context?.summary ?? null,
+          finalPlan.location?.name      ?? null,
+        ]
+      );
+      console.log("💾 [PLAN SERVICE] Plan persistido en DB — user:", user.id);
+    } catch (dbErr) {
+      console.error("⚠️ [PLAN SERVICE] Error guardando en DB:", dbErr.message);
+      // No rompemos el flujo: el usuario igual recibe su plan
     }
 
     // =====================================================
@@ -158,12 +177,12 @@ export const getPlanById = async (id, user) => {
         estimated_total: 0,
         price_range: {
           coffee: "N/A",
-          meal: "N/A",
-          snack: "N/A",
+          meal:   "N/A",
+          snack:  "N/A",
         },
       },
       optimal_day: null,
-      security: null,
+      security:    null,
     };
   }
 };
