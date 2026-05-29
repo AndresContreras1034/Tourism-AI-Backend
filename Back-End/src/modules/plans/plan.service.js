@@ -39,38 +39,53 @@ const getRecommendationsFromFastAPI = async (filters) => {
 // =====================================================
 // 🧠 GET PLAN BY ID (ENTRYPOINT)
 // =====================================================
-export const getPlanById = async (id, user) => {
+export const getPlanById = async (id, user, profile = {}) => {
   try {
     console.log("🔥 =====================================");
     console.log("🧠 [PLAN SERVICE] START");
     console.log("🔥 =====================================");
     console.log("🧾 PLAN ID:", id);
     console.log("👤 USER:", user?.id);
+    console.log("📋 PROFILE:", profile);
 
     // =====================================================
-    // 1. SEED BASE
+    // 1. SEED BASE (con perfil real)
     // =====================================================
     const seed = {
       id,
-      title: "Plan generado",
+      title: `Plan ${profile.travel_type || "personalizado"}`,
       location: {
-        name: "Bogotá",
+        name: profile.origin_city || "Bogotá",
         coordinates: { lat: 4.7110, lng: -74.0721 },
       },
       score: 4.5,
       transport: [],
       map_points: [],
+      profile: {
+        originCity: profile.origin_city || "Bogotá",
+        budget:     profile.budget      || "medio",
+        travelType: profile.travel_type || "general",
+        climate:    profile.climate     || "indiferente",
+        interests:  profile.interests   || [],
+        companions: profile.companions  || "solo",
+        duration:   profile.duration    || "1 día",
+      },
     };
 
     console.log("🌱 SEED:", seed);
 
     // =====================================================
-    // 2. FILTERS FOR FASTAPI
+    // 2. FILTERS FOR FASTAPI (con perfil real)
     // =====================================================
     const filters = {
-      userId:   user?.id,
-      location: seed.location.name,
-      planId:   id,
+      userId:      user?.id,
+      location:    seed.location.name,
+      planId:      id,
+      tipo_viaje:  profile.travel_type,
+      presupuesto: profile.budget,
+      compania:    profile.companions,
+      clima:       profile.climate,
+      duracion:    profile.duration,
     };
 
     // =====================================================
@@ -93,7 +108,6 @@ export const getPlanById = async (id, user) => {
 
     // =====================================================
     // 5. ORCHESTRATOR CALL
-    // Retorna { plan, tokens_used } con tokens reales de DeepSeek
     // =====================================================
     let finalPlan;
     let tokens_used = 0;
@@ -118,7 +132,7 @@ export const getPlanById = async (id, user) => {
     }
 
     // =====================================================
-    // 5.5 💾 PERSISTIR EN DB con tokens reales
+    // 5.5 💾 PERSISTIR EN DB
     // =====================================================
     try {
       await query(
@@ -130,13 +144,12 @@ export const getPlanById = async (id, user) => {
           finalPlan.title               ?? "Plan generado",
           finalPlan.ai_context?.summary ?? null,
           finalPlan.location?.name      ?? null,
-          tokens_used,                        // ✅ tokens reales, no hardcodeado
+          tokens_used,
         ]
       );
       console.log(`💾 [PLAN SERVICE] Plan persistido — user: ${user.id} | tokens: ${tokens_used}`);
     } catch (dbErr) {
       console.error("⚠️ [PLAN SERVICE] Error guardando en DB:", dbErr.message);
-      // No rompemos el flujo: el usuario igual recibe su plan
     }
 
     // =====================================================

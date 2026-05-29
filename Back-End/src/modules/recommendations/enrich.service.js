@@ -1,5 +1,6 @@
 import { callDeepSeek } from "../ai/ai.service.js";
 import { getRoute } from "../ai/ors.service.js";
+import { getOptimalDay } from "../ai/weather.service.js";
 
 // ======================================================
 // 🧠 ENRICH SINGLE PLAN
@@ -8,7 +9,7 @@ export const enrichPlan = async (plan) => {
   try {
     console.log("🧠 Enriching plan...");
 
-    const aiResponse = await callDeepSeek([
+    const { content: aiResponse } = await callDeepSeek([
       {
         role: "system",
         content: `
@@ -62,17 +63,6 @@ Devuelve exactamente este formato JSON:
     "level": "low|medium|high",
     "recommendation": "",
     "tips": []
-  },
-  "optimal_day": {
-    "date": "",
-    "weather": {
-      "condition": "",
-      "temp_min": 0,
-      "temp_max": 0,
-      "precip_probability": 0,
-      "icon": ""
-    },
-    "reason": ""
   }
 }
 
@@ -103,6 +93,12 @@ Reglas:
     }
 
     // ======================================================
+    // 🌤️ CLIMA REAL — Open-Meteo
+    // ======================================================
+    console.log("🌤️ Obteniendo día óptimo con clima real...");
+    const optimalDay = await getOptimalDay();
+
+    // ======================================================
     // 🗺️ ORS — Generar polilínea de ruta entre map_points
     // ======================================================
     let route = [];
@@ -115,7 +111,8 @@ Reglas:
     return {
       ...plan,
       ...parsed,
-      route, // [{ lat, lng }, ...] para pintar en Leaflet
+      optimal_day: optimalDay, // ✅ reemplaza el de DeepSeek con datos reales
+      route,
     };
 
   } catch (error) {

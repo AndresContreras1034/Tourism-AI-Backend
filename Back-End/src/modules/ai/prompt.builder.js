@@ -3,39 +3,172 @@
 // ======================================================
 
 export const buildTravelPrompt = (profile) => {
-  const { originCity, budget, travelType, climate, interests, companions, duration } = profile;
-  const safeInterests = Array.isArray(interests) ? interests.join(", ") : "No especificado";
+  const {
+    originCity,
+    budget,
+    travelType,
+    climate,
+    interests,
+    companions,
+    duration,
+  } = profile;
 
-  return `Eres un experto en turismo y planificación de viajes en Colombia. Genera EXACTAMENTE 3 planes de viaje personalizados basados en este perfil:
+  const safeInterests = Array.isArray(interests)
+    ? interests.join(", ")
+    : "No especificado";
 
-Ciudad origen: ${originCity || "No especificado"} | Presupuesto: ${budget || "medio"} | Tipo: ${travelType || "general"} | Clima: ${climate || "indiferente"} | Intereses: ${safeInterests} | Compañía: ${companions || "no especificado"} | Duración: ${duration || "no especificado"}
+  return `
+Eres un experto en turismo, planificación de viajes y recomendaciones locales en Colombia.
 
-Los 3 planes deben variar entre económico, medio y premium. Usa precios reales de Colombia con experiencias locales auténticas.
+Tu tarea es generar EXACTAMENTE 3 planes de viaje personalizados.
 
-Responde SOLO con este JSON válido, sin markdown ni texto adicional:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 CONTEXTO DEL USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Ciudad de origen: ${originCity || "No especificado"}
+- Presupuesto: ${budget || "medio"}
+- Tipo de viaje: ${travelType || "general"}
+- Clima preferido: ${climate || "indiferente"}
+- Intereses: ${safeInterests}
+- Compañía: ${companions || "no especificado"}
+- Duración del viaje: ${duration || "no especificado"}
 
-{"plans":[{"title":"string","location":{"name":"string","coordinates":{"lat":0,"lng":0}},"score":0,"ai_context":{"summary":"string","local_insight":"string"},"transport":[{"key":"caminar|uber|bicicleta|bus","desc":"string"}],"map_points":[{"lat":0,"lng":0,"label":"string"}],"experience":{"description":"string","highlights":["string"]},"budget":{"estimated_total":0,"price_range":{"coffee":"string","meal":"string","snack":"string"}},"optimal_day":{"date":"string","weather":{"condition":"string","temp_min":0,"temp_max":0,"precip_probability":0,"icon":"string"},"reason":"string"},"security":{"level":"low|medium|high","recommendation":"string","tips":["string"]}}]}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 OBJETIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Crear planes realistas y turísticos
+- Basados en presupuesto real de Colombia
+- Experiencias locales auténticas
+- Variación clara entre los 3 planes (económico, medio, premium)
 
-Sustituye los valores de ejemplo. Usa valores realistas, nunca null.`.trim();
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 RESPUESTA OBLIGATORIA (SOLO JSON VÁLIDO)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Devuelve EXACTAMENTE este formato JSON, sin markdown, sin bloques de código, sin texto adicional:
+
+{
+  "plans": [
+    {
+      "title": "string",
+      "location": {
+        "name": "string",
+        "coordinates": {
+          "lat": number,
+          "lng": number
+        }
+      },
+      "score": number,
+      "ai_context": {
+        "summary": "string",
+        "local_insight": "string"
+      },
+      "transport": [
+        {
+          "key": "caminar | uber | bicicleta | bus",
+          "desc": "string"
+        }
+      ],
+      "map_points": [
+        {
+          "lat": number,
+          "lng": number,
+          "label": "string"
+        }
+      ],
+      "experience": {
+        "description": "string",
+        "highlights": ["string"]
+      },
+      "budget": {
+        "estimated_total": number,
+        "price_range": {
+          "coffee": "string",
+          "meal": "string",
+          "snack": "string"
+        }
+      },
+      "optimal_day": {
+        "date": "string",
+        "weather": {
+          "condition": "string",
+          "temp_min": number,
+          "temp_max": number,
+          "precip_probability": number,
+          "icon": "string"
+        },
+        "reason": "string"
+      },
+      "security": {
+        "level": "low | medium | high",
+        "recommendation": "string",
+        "tips": ["string"]
+      }
+    }
+  ]
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 REGLAS OBLIGATORIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- SOLO JSON válido (sin markdown, sin \`\`\`)
+- EXACTAMENTE 3 planes
+- Sin textos adicionales, explicaciones ni comentarios
+- Sin null — si no hay dato, usa un valor realista inventado
+`.trim();
 };
 
 // ======================================================
 // 💬 2. PROMPT PARA CHAT
 // ======================================================
 
-export const buildChatPrompt = (message) =>
-  `Eres un asistente experto en turismo, seguridad urbana y precios en Bogotá, Colombia. Ayudas a turistas a detectar estafas, entender precios y obtener contexto cultural real. Responde de forma clara, directa y con tono calmado. No exageres peligros ni inventes leyes.
+export const buildChatPrompt = (message) => {
+  return `
+Eres un asistente experto en turismo, seguridad urbana y precios en Bogotá, Colombia.
 
-${message}`.trim();
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 TU FUNCIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Ayudar a turistas y extranjeros
+- Detectar posibles estafas
+- Explicar precios normales vs abusivos
+- Dar contexto cultural real
+- Dar consejos claros y seguros
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧠 REGLAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- No exagerar peligros
+- No inventar leyes
+- Respuestas claras, directas y útiles
+- Tono calmado y profesional
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 MENSAJE DEL USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${message}
+`.trim();
+};
 
 // ======================================================
 // 🔥 3. CHAT CON PERFIL
 // ======================================================
 
 export const buildChatWithProfilePrompt = (profile, message) => {
-  const interests = Array.isArray(profile?.interests) ? profile.interests.join(", ") : "N/A";
+  const interests = Array.isArray(profile?.interests)
+    ? profile.interests.join(", ")
+    : "N/A";
 
-  return `${buildChatPrompt(message)}
+  return `
+${buildChatPrompt(message)}
 
-Perfil del usuario — Intereses: ${interests} | Tipo de viaje: ${profile?.travelType || "N/A"} | Presupuesto: ${profile?.budget || "N/A"}`.trim();
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 CONTEXTO DEL USUARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Intereses: ${interests}
+- Tipo de viaje: ${profile?.travelType || "N/A"}
+- Presupuesto: ${profile?.budget || "N/A"}
+`.trim();
 };
+
+
